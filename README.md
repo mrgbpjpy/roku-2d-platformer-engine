@@ -19,7 +19,6 @@ This project demonstrates real **game-engine fundamentals** on constrained hardw
 | ⬅ Left | Move left |
 | ➡ Right | Move right |
 | ⬆ Up | Jump |
-| Hold ⬅ / ➡ | Continuous movement |
 | Release ⬅ / ➡ | Return to idle |
 | Back | Exit app |
 
