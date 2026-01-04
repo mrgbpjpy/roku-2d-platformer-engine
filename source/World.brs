@@ -4,7 +4,7 @@ function LoadWorld()  as Object
     	world.platforms = []
 
 	' Ground
-	world.platforms.Push({x:0, y:600, w:4000, h: 30 })
+	world.platforms.Push({x:0, y:700, w:4000, h: 30 })
 
 	'Floating Platforms
 	world.platforms.Push({x:700, y:500, w:200, h: 20 })
