@@ -1,3 +1,26 @@
+sub DrawCreditsDialog(screen as Object, font as Object)
+    dialogW = 800
+    dialogH = 400
+    x = (1280 - dialogW) / 2
+    y = (720 - dialogH) / 2
+
+    screen.DrawRect(x, y, dialogW, dialogH, &h202020FF)
+    screen.DrawRect(x, y, dialogW, 4, &hFFFFFFFF)
+
+    screen.DrawText("Developer Info", x + 180, y + 40, &hFFFFFFFF, font)
+    screen.DrawText("Erick Esquilin", x + 200, y + 120, &hFFFFFFFF, font)
+    screen.DrawText("Mrgbpjpy@gmail.com", x + 150, y + 170, &hFFFFFFFF, font)
+
+    btnW = 140 : btnH = 50
+    btnX = x + (dialogW - btnW) / 2 : btnY = y + dialogH - 90
+
+    screen.DrawRect(btnX, btnY, btnW, btnH, &hFFD700FF)
+    screen.DrawText("OK", btnX + (btnW / 2) - 18, btnY + (btnH / 2) - 18, &h000000FF, font)
+
+
+end sub
+' source/main.brs
+
 sub main()
 
     ' ============================
@@ -19,6 +42,9 @@ sub main()
     STATE_START = 0
     STATE_GAME  = 1
 
+    MENU_START   = 0
+    MENU_CREDITS = 1
+
     ' ============================
     ' SCREEN / PORT
     ' ============================
@@ -31,16 +57,17 @@ sub main()
     font = CreateObject("roFontRegistry").GetDefaultFont(48, false, false)
 
     ' ============================
-    ' AUDIO MANAGER
+    ' AUDIO
     ' ============================
     audio = CreateAudioManager()
 
     ' ============================
     ' START MENU
     ' ============================
-    menuItems = ["START GAME", "OPTIONS", "CREDITS"]
+    menuItems = ["START GAME", "CREDITS"]
     menuIndex = 0
     gameState = STATE_START
+    dialogActive = false
 
     audio.PlayMusic("pkg:/sound/music/Menu_Music.mp3")
 
@@ -58,21 +85,33 @@ sub main()
             screen.DrawText(menuItems[i], 520, 320 + (i * 60), color, font)
         end for
 
+        if dialogActive then
+            DrawCreditsDialog(screen, font)
+        end if
+
         screen.SwapBuffers()
 
         msg = port.GetMessage()
         if type(msg) = "roUniversalControlEvent"
             code = msg.GetInt()
 
-            if code = 2 and menuIndex > 0 then menuIndex--
-            if code = 3 and menuIndex < menuItems.Count() - 1 then menuIndex++
+            if dialogActive then
+                if code = 6 or code = 0 then dialogActive = false
+            else
+                if code = 2 and menuIndex > 0 then menuIndex--
+                if code = 3 and menuIndex < menuItems.Count() - 1 then menuIndex++
 
-            if code = 6 and menuIndex = 0
-                gameState = STATE_GAME
-                audio.PlayMusic("pkg:/sound/music/Main_Start.mp3")
+                if code = 6 then
+                    if menuIndex = MENU_START then
+                        gameState = STATE_GAME
+                        audio.PlayMusic("pkg:/sound/music/Main_Start.mp3")
+                    else if menuIndex = MENU_CREDITS then
+                        dialogActive = true
+                    end if
+                end if
+
+                if code = 0 then return
             end if
-
-            if code = 0 then return
         end if
 
         sleep(16)
@@ -98,7 +137,7 @@ sub main()
     ' ============================
     while running
 
-        tick++
+        tick = tick + 1
         now = clock.TotalMilliseconds() / 1000.0
 
         ' -------- INPUT --------
@@ -111,7 +150,7 @@ sub main()
                 if code = 4 then lastLeftTime = now
                 if code = 5 then lastRightTime = now
 
-                if code = 2 and player.onGround
+                if code = 2 and player.onGround then
                     audio.PlaySFX("pkg:/sound/sound_effects/cartoon_jump.mp3")
                     player.velY = JUMP_VEL
                     player.onGround = false
@@ -128,42 +167,39 @@ sub main()
         rightHeld = (now - lastRightTime) < HOLD_TIMEOUT
 
         ' -------- HORIZONTAL --------
-        if leftHeld and not rightHeld
-            player.velX -= WALK_ACCEL
+        if leftHeld and not rightHeld then
+            player.velX = player.velX - WALK_ACCEL
             player.facing = -1
-        else if rightHeld and not leftHeld
-            player.velX += WALK_ACCEL
+        else if rightHeld and not leftHeld then
+            player.velX = player.velX + WALK_ACCEL
             player.facing = 1
         else
-            player.velX *= FRICTION
+            player.velX = player.velX * FRICTION
         end if
 
         if abs(player.velX) < 0.15 then player.velX = 0
         if player.velX < -MAX_SPEED then player.velX = -MAX_SPEED
         if player.velX >  MAX_SPEED then player.velX =  MAX_SPEED
 
-        player.x += player.velX
+        player.x = player.x + player.velX
 
         ' -------- VERTICAL --------
-        prevBottom = player.y
-        player.velY += GRAVITY
-        player.y += player.velY
+        player.velY = player.velY + GRAVITY
+        player.y = player.y + player.velY
         player.onGround = false
 
         ' -------- COLLISION --------
         for each plat in world.platforms
-
             prevBottom = player.y - player.velY
             currBottom = player.y
 
             if player.x + player.halfW > plat.x and player.x - player.halfW < plat.x + plat.w
-                if prevBottom <= plat.y and currBottom >= plat.y
+                if prevBottom <= plat.y and currBottom >= plat.y then
                     player.y = plat.y
                     player.velY = 0
                     player.onGround = true
                 end if
             end if
-
         end for
 
         ' -------- CAMERA --------
@@ -192,7 +228,10 @@ sub main()
 
         screen.SwapBuffers()
         sleep(16)
-
     end while
 
 end sub
+
+
+
+
